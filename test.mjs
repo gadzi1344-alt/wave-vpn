@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import worker from './src/index.js';
+const store = new Map(), calls = [];
+const env = { BOT_TOKEN:'token', WEBHOOK_SECRET:'abc123', ADMIN_ID:'100', WAVE_KV:{get:async k=>store.get(k)??null,put:async(k,v)=>store.set(k,v),delete:async k=>store.delete(k)} };
+globalThis.fetch = async (url,opt) => { calls.push({method:url.split('/').at(-1),body:JSON.parse(opt.body)}); return new Response(JSON.stringify({ok:true,result:{}}),{headers:{'content-type':'application/json'}}); };
+const req = async (u,s='abc123') => worker.fetch(new Request('https://example.test/telegram',{method:'POST',headers:{'X-Telegram-Bot-Api-Secret-Token':s},body:JSON.stringify(u)}),env);
+const msg = (id,text) => ({message:{from:{id},chat:{id,type:'private'},message_id:1,text}});
+assert.equal((await req(msg(100,'/start'),'wrong')).status,403);
+await req(msg(101,'/grant 102 https://vpn.example/secret')); assert.equal(store.size,0);
+await req(msg(100,'/grant 102 https://vpn.example/secret')); assert.equal(store.get('subscription:102'),'https://vpn.example/secret');
+await req({callback_query:{id:'c',from:{id:102},message:{chat:{id:102,type:'private'}},data:'subscription'}}); assert.ok(calls.at(-1).body.text.includes('https://vpn.example/secret'));
+await req({callback_query:{id:'c',from:{id:103},message:{chat:{id:103,type:'private'}},data:'subscription'}}); assert.ok(!calls.at(-1).body.text.includes('https://vpn.example/secret'));
+await req(msg(100,'/grant 102 javascript:bad')); assert.equal(store.get('subscription:102'),'https://vpn.example/secret');
+await req(msg(100,'/revoke 102')); assert.equal(store.size,0);
+console.log('OK: webhook security, administrator, isolation, link validation, revoke');

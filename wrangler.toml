@@ -1,0 +1,11 @@
+name = "wave-vpn-bot"
+main = "src/index.js"
+compatibility_date = "2026-11-01"
+
+[[kv_namespaces]]
+binding = "WAVE_KV"
+id = "c4cf22499712465580ece2b2825e439b"
+
+# Необязательно: Telegram-имя поддержки без @
+# [vars]
+# SUPPORT_USERNAME = "almv"
